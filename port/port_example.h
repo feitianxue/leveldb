@@ -10,6 +10,8 @@
 #ifndef STORAGE_LEVELDB_PORT_PORT_EXAMPLE_H_
 #define STORAGE_LEVELDB_PORT_PORT_EXAMPLE_H_
 
+#include "port/thread_annotations.h"
+
 namespace leveldb {
 namespace port {
 
@@ -23,23 +25,23 @@ static const bool kLittleEndian = true /* or some other expression */;
 // ------------------ Threading -------------------
 
 // A Mutex represents an exclusive lock.
-class Mutex {
+class LOCKABLE Mutex {
  public:
   Mutex();
   ~Mutex();
 
   // Lock the mutex.  Waits until other lockers have exited.
   // Will deadlock if the mutex is already locked by this thread.
-  void Lock();
+  void Lock() EXCLUSIVE_LOCK_FUNCTION();
 
   // Unlock the mutex.
   // REQUIRES: This mutex was locked by this thread.
-  void Unlock();
+  void Unlock() UNLOCK_FUNCTION();
 
   // Optionally crash if this thread does not hold this mutex.
   // The implementation must be fast, especially if NDEBUG is
   // defined.  The implementation is allowed to skip all checks.
-  void AssertHeld();
+  void AssertHeld() ASSERT_EXCLUSIVE_LOCK();
 };
 
 class CondVar {
@@ -128,6 +130,12 @@ extern bool Snappy_Uncompress(const char* input_data, size_t input_length,
 // Else repeatedly calls (*func)(arg, data, n) and then returns true.
 // The concatenation of all "data[0,n-1]" fragments is the heap profile.
 extern bool GetHeapProfile(void (*func)(void*, const char*, int), void* arg);
+
+// Extend the CRC to include the first n bytes of buf.
+//
+// Returns zero if the CRC cannot be extended using acceleration, else returns
+// the newly extended CRC value (which may also be zero).
+uint32_t AcceleratedCRC32C(uint32_t crc, const char* buf, size_t size);
 
 }  // namespace port
 }  // namespace leveldb
